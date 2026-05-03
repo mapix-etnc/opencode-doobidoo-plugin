@@ -45,7 +45,7 @@ Add to `~/.config/opencode/opencode.json`:
 
 ## Configuration
 
-All configuration is via environment variables. Set them in the script that starts `mcp-memory-service`, or export them before starting OpenCode.
+All configuration is via environment variables. Set in the startup script for `mcp-memory-service`, or export before starting OpenCode.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -65,9 +65,9 @@ All configuration is via environment variables. Set them in the script that star
 ## Development workflow
 
 ```
-1. Edit  ~/Projects/opencode-doobidoo-plugin/src/plugin.ts
+1. Edit src/plugin.ts
 2. bun tsc --noEmit          # optional type check
-3. OpenCode picks up changes automatically via symlink
+3. OpenCode picks up changes automatically (symlink)
 4. git commit + push
 ```
 
