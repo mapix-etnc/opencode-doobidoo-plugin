@@ -311,7 +311,7 @@ export const DoobidooMemoryPlugin: Plugin = async ({ client, directory }) => {
                 return userMsgs.length > 0
                   ? (userMsgs[0].parts || [])
                       .filter((p: { type: string; synthetic?: boolean }) => p.type === "text" && !p.synthetic)
-                      .map((p: { text?: string }) => p.text || "")
+                      .map((p) => ((p as unknown as { text?: string }).text) || "")
                       .join(" ").trim().substring(0, 200)
                   : ""
               })()
