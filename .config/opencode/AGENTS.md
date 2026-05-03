@@ -102,9 +102,10 @@ Internal constants (not configurable via env, change in `plugin.ts`):
 
 1. Edit `src/plugin.ts`
 2. Run `bun run typecheck` — catches type errors in ~2s
-3. Run `bun run scripts/harness.ts` — validates logic against live doobidoo
+3. Run `bun run harness` — validates logic against live doobidoo
 4. If harness passes → restart OpenCode to load the updated plugin
-5. Commit
+5. Optionally run `bun run e2e` — full E2E against real OpenCode (requires running instance)
+6. Commit
 
 **Note: OpenCode caches the plugin in memory.** File changes on disk have no effect until OpenCode is restarted.
 
@@ -115,7 +116,18 @@ Internal constants (not configurable via env, change in `plugin.ts`):
 | Typecheck | `bun run typecheck` | ~2s | Type errors, missing properties |
 | Harness | `bun run harness` | ~5s | Logic bugs, inject pipeline, session saving |
 | Integration | (future) | ~3s | HTTP layer, doobidoo API contract |
-| Manual | restart OpenCode | ~2min | Hook registration, edge cases in real session |
+| **E2E** | `bun run e2e` | ~30s | Hook registration, real OpenCode plugin loading, real LLM inject |
+| Manual | restart OpenCode | ~2min | Edge cases in real interactive session |
+
+### E2E silent failure detection
+
+The plugin is **silent by design** — if a hook is renamed or removed by OpenCode, no error appears.
+The E2E test catches this: if `messages.transform` is not called, the LLM won't see the memory
+and the secret word verification will fail.
+
+Run E2E after:
+- Upgrading `@opencode-ai/plugin` or `@opencode-ai/sdk`
+- Suspicion that experimental hooks changed upstream
 
 ---
 
@@ -181,6 +193,53 @@ Input: "jak funguje doobidoo plugin a memory injection?"
   ✓ inject OK   stored: 0
 ══════════════════════════════════════════════
 ```
+
+---
+
+## E2E Test: `scripts/e2e.ts`
+
+### Purpose
+
+Full end-to-end verification using the OpenCode SDK. Tests that the plugin is actually
+loaded and hooks are called by a real OpenCode instance.
+
+### How it works
+
+1. Stores a unique test memory in doobidoo (`E2E_<timestamp>: secret word is <random>`)
+2. Starts a fresh OpenCode subprocess via `createOpencode()` — loads our plugin from `~/.config/opencode/plugins/`
+3. Creates a session and sends a targeted prompt asking for the secret word
+4. If the plugin injected the memory, the LLM can quote it back → **PASS**
+5. Cleans up: deletes test memory + session + closes server
+
+### Usage
+
+```bash
+bun run e2e                           # default model (E2E_MODEL from .env)
+E2E_MODEL=llm-test/qwen3-8b bun run e2e   # override model
+```
+
+### Configuration
+
+Credentials are loaded from `.env` (Bun auto-loads it):
+
+```env
+DOOBIDOO_API_URL=http://localhost:8000/api
+MEMORY_API_KEY=<from ~/.config/opencode/secrets/memory-api-key>
+E2E_MODEL=llm-test/qwen3-8b          # format: providerID/modelID
+```
+
+LLM credentials (for the OpenCode subprocess) are read automatically from
+`~/.local/share/opencode/auth.json` — no additional config needed.
+
+### What E2E covers that harness does NOT
+
+| | Harness | E2E |
+|---|---|---|
+| Plugin logic (filtering, dedup, building) | ✓ | ✓ |
+| Hook actually registered by OpenCode | ✗ | ✓ |
+| `messages.transform` called by OpenCode | ✗ | ✓ |
+| Plugin loaded from `~/.config/opencode/plugins/` | ✗ | ✓ |
+| Real LLM sees injected context | ✗ | ✓ |
 
 ---
 

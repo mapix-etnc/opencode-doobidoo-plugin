@@ -14,12 +14,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "harness": "bun run scripts/harness.ts",
-    "harness:dry": "bun run scripts/harness.ts --dry-run"
+    "harness:dry": "bun run scripts/harness.ts --dry-run",
+    "e2e": "bun run scripts/e2e.ts"
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.0.143"
   },
   "devDependencies": {
+    "@opencode-ai/sdk": "latest",
     "@types/bun": "latest",
     "typescript": "~5.9.3"
   },
