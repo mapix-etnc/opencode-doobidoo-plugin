@@ -549,6 +549,30 @@ Do NOT fall back to general knowledge for anything covered by <memory-context>.`
 
       if (!sessionId) return
 
+      // Skip subagents - they have explicit instructions and don't need memories
+      try {
+        const sessionInfo = await client.session.get({ path: { id: sessionId } })
+        if (sessionInfo.data?.parentID) {
+          await client.app.log({
+            body: {
+              service: "doobidoo-memory",
+              level: "info",
+              message: `Skipping memory inject for subagent session ${sessionId}`,
+            },
+          })
+          return
+        }
+      } catch (err) {
+        await client.app.log({
+          body: {
+            service: "doobidoo-memory",
+            level: "warn",
+            message: `Failed to check subagent status: ${err}`,
+          },
+        })
+        // Proceed with inject on failure (fail open)
+      }
+
       // Skip internal LLM calls (title-generator etc.)
       const MIN_CHAT_SYSTEM_CHARS = 10_000
       const systemTotalChars = output.system.join("").length

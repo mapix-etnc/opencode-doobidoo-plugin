@@ -82,6 +82,7 @@ const fakeClient = {
   },
   session: {
     messages: async (_opts: unknown) => ({ data: scenarioMessages }),
+    get: async (_opts: unknown) => ({ data: { parentID: undefined } }),
   },
 }
 
@@ -400,6 +401,54 @@ const scenarios: Array<{
       } else {
         console.log("\n  ~ nothing stored (expected), but no skip log found")
         console.log("    (check: SESSION_MIN_TOOLS threshold or API availability)")
+      }
+    },
+  },
+
+  // 6. inject-subagent — subagent session → skip inject
+  {
+    name: "inject-subagent",
+    description: "Subagent session (parentID set) → skip memory inject",
+    fn: async (hooks, sessionId) => {
+      console.log(`\nSimulating: subagent session with parentID set`)
+
+      // Override session.get for this scenario - return parentID to simulate subagent
+      const originalGet = (fakeClient as Record<string, unknown>).session?.get
+      if ((fakeClient as Record<string, unknown>).session) {
+        ((fakeClient as Record<string, unknown>).session as Record<string, unknown>).get =
+          async (_opts: unknown) => ({ data: { parentID: "parent-session-123" } })
+      }
+
+      scenarioMessages = [
+        userMsg("do this task", sessionId),
+      ]
+
+      await hooks["experimental.chat.messages.transform"]?.(
+        { sessionID: sessionId } as Parameters<NonNullable<typeof hooks["experimental.chat.messages.transform"]>>[0],
+        { messages: scenarioMessages },
+      )
+
+      // Call system.transform - should detect subagent and skip
+      await hooks["experimental.chat.system.transform"]?.(
+        { sessionID: sessionId, model: { id: "test-model" } } as Parameters<NonNullable<typeof hooks["experimental.chat.system.transform"]>>[0],
+        { system: ["You are a helpful assistant."] },
+      )
+
+      // Restore original get
+      if ((fakeClient as Record<string, unknown>).session) {
+        ((fakeClient as Record<string, unknown>).session as Record<string, unknown>).get = originalGet
+      }
+
+      const skipLog = captured.logs.find(l => l.message.includes("Skipping memory inject for subagent"))
+      const hasInject = captured.logs.find(l => l.message.includes("[MEMORY] inject:"))
+
+      if (skipLog && !hasInject) {
+        console.log("\n  ✓ correctly skipped inject for subagent")
+        console.log(`    → ${skipLog.message}`)
+      } else if (hasInject) {
+        console.log("\n  ✗ unexpected: memory was injected for subagent")
+      } else {
+        console.log("\n  ~ no skip log found (check: session.get mock)")
       }
     },
   },
