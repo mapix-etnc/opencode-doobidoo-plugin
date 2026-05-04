@@ -28,7 +28,7 @@ import { createOpencode } from "@opencode-ai/sdk"
 // ---------------------------------------------------------------------------
 // Config (Bun auto-loads .env)
 // ---------------------------------------------------------------------------
-declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code: number): never }
+declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code: number): never; stdout: { write(s: string): void } }
 
 const MEMORY_API = process.env.DOOBIDOO_API_URL ?? "http://localhost:8000/api"
 const MEMORY_API_KEY = process.env.MEMORY_API_KEY ?? ""
@@ -139,13 +139,59 @@ const sessionRes = await (client as any).session.create({ body: {} })
 sessionId = sessionRes.data?.id ?? sessionRes.id ?? null
 console.log(`  ✓ Session: ${sessionId}`)
 
-// [4] Send prompt
+// [4] Send prompt via prompt_async (fire-and-forget, LLM runs in background)
 const prompt = `What secret test word is stored for ${uniqueKey}? Quote it exactly as written.`
 console.log(`\n[4] Sending prompt:`)
 console.log(`    "${prompt}"`)
 
+// Subscribe SSE before sending prompt to catch all events
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const promptRes = await (client as any).session.prompt({
+let resolveAssistant!: (text: string) => void
+const assistantPromise = new Promise<string>(res => { resolveAssistant = res })
+
+const sseWatcher = (async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { stream } = await (client as any).event.subscribe()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for await (const event of stream as AsyncIterable<any>) {
+    const type: string = event?.type ?? ""
+    if (type === "session.error") {
+      const msg = event?.properties?.error?.data?.message ?? "unknown"
+      resolveAssistant(`__ERROR__: ${msg}`)
+      break
+    }
+    if (type === "message.part.updated") {
+      const part = event?.properties?.part
+      if (part?.type === "text" && part?.sessionID === sessionId) {
+        // Accumulate — wait for session.idle to get final text
+        continue
+      }
+    }
+    if (type === "session.idle" && event?.properties?.sessionID === sessionId) {
+      // Fetch final messages
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msgsRes = await (client as any).session.messages({ path: { id: sessionId } })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msgs: Array<any> = msgsRes.data ?? []
+      const assistants = msgs.filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (m: any) => m.info?.role === "assistant" && !m.info?.error,
+      )
+      if (assistants.length > 0) {
+        const last = assistants[assistants.length - 1]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const text = (last.parts ?? []).filter((p: any) => p.type === "text").map((p: any) => p.text ?? "").join("")
+        resolveAssistant(text)
+      } else {
+        resolveAssistant("")
+      }
+      break
+    }
+  }
+})()
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+await (client as any).session.promptAsync({
   path: { id: sessionId },
   body: {
     model: { providerID, modelID },
@@ -153,13 +199,17 @@ const promptRes = await (client as any).session.prompt({
   },
 })
 
+console.log(`\n[4b] Waiting for assistant reply (up to 60s)...`)
+const responseText = await Promise.race([
+  assistantPromise,
+  new Promise<string>(res => setTimeout(() => res("__TIMEOUT__"), 60_000)),
+])
+
+void sseWatcher.catch(() => {})
+
 // [5] Verify response
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const parts: Array<any> = promptRes.data?.parts ?? promptRes.parts ?? []
-const responseText: string = parts
-  .filter((p: { type: string }) => p.type === "text")
-  .map((p: { text?: string }) => p.text ?? "")
-  .join("")
+console.log(`\n[5] LLM response preview:`)
+console.log(`    ${responseText.substring(0, 300).replace(/\n/g, "\n    ")}`)
 
 console.log(`\n[5] LLM response preview:`)
 console.log(`    ${responseText.substring(0, 300).replace(/\n/g, "\n    ")}`)
