@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "harness": "bun run scripts/harness.ts",
     "harness:dry": "bun run scripts/harness.ts --dry-run",
-    "e2e": "bun run scripts/e2e.ts"
+    "e2e": "bun run scripts/e2e.ts",
+    "e2e-subagent": "bun run scripts/e2e-subagent.ts"
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.0.143"
