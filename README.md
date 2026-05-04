@@ -5,6 +5,7 @@ OpenCode plugin for [doobidoo/mcp-memory-service](https://github.com/doobidoo/mc
 ## What it does
 
 - **Injects relevant memories** into every LLM call (identity, lessons learned, semantic context)
+- **Skips memory inject for subagents** — sessions with `parentID` (spawned via Task tool) don't get memories injected (they have explicit instructions)
 - **Saves session summaries** automatically on session end — both code sessions (files changed) and conversation sessions (research, planning)
 - **Extracts lessons** from compaction summaries and stores them as discrete memory entries
 - **Pre-warms** the memory server on session start
@@ -85,13 +86,15 @@ bun run typecheck
 OpenCode session
     │
     ├── messages.transform  → search memories → pendingMemoryBlock
-    ├── system.transform    → inject pendingMemoryBlock into system prompt
+    ├── system.transform    → check parentID → inject pendingMemoryBlock into system prompt
     ├── tool.execute.after  → track tool calls + changed files
     ├── session.idle        → save session/conversation summary
     └── session.compacting  → extend compaction prompt → extract lessons on next idle
 ```
 
 The two-phase inject (messages.transform → system.transform) guarantees that memory context is appended to the system prompt *after* all other content is assembled but *before* the LLM call.
+
+Subagent detection: `system.transform` checks `session.parentID` (via `client.session.get()`). If present, the session is a subagent — inject is skipped (subagents have explicit instructions and don't need memories).
 
 ## License
 
