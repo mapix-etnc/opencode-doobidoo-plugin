@@ -211,9 +211,6 @@ void sseWatcher.catch(() => {})
 console.log(`\n[5] LLM response preview:`)
 console.log(`    ${responseText.substring(0, 300).replace(/\n/g, "\n    ")}`)
 
-console.log(`\n[5] LLM response preview:`)
-console.log(`    ${responseText.substring(0, 300).replace(/\n/g, "\n    ")}`)
-
 const passed = responseText.includes(secretWord)
 console.log(`\n[6] Verification:`)
 if (passed) {

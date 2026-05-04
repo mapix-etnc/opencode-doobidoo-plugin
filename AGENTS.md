@@ -67,6 +67,7 @@ LLM credentials read from `~/.local/share/opencode/auth.json` automatically.
 - **`allMessages` before declaration** — in `session.idle` handler, always `await client.session.messages(...)` before using `allMessages`.
 - **`@opencode-ai/plugin` import is type-only** — stripped by Bun at runtime; harness works without the package in node_modules.
 - **`bun.lock` in `.gitignore`** — exists in working tree but is gitignored; don't commit it.
+- **`temp/` adresář** — dočasné soubory (výstupy z bash příkazů pro nativní nástroje) patří sem, ne do `/tmp`. Adresář je v `.gitignore`.
 - **doobidoo memory server je vždy dostupný** — při vývoji a testech (harness + e2e) předpokládejte běžící server na localhost:8000.
 
 ## Session close checklist

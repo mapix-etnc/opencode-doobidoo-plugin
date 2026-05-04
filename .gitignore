@@ -3,3 +3,6 @@ bun.lock
 *.js
 *.d.ts
 .env
+opencode-src
+temp/
+.opencode/
