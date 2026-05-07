@@ -282,6 +282,96 @@ Tato pravidla nesmí přejít do memory — musí být garantována bez ohledu n
 
 ---
 
+## Workspace-scoped memory
+
+### Problém
+
+Uživatel pracuje ve více workspace současně:
+- `~/OpenCode` — obecná práce, centrální hub
+- `~/Projects/opencode-doobidoo-plugin` — vývoj pluginu
+- `~/Projects/agent-toolbox` — atd.
+
+Doobidoo má **jednu sdílenou DB** pro všechny workspace. Aktuálně plugin ukládá `workDir` do textu session summary, ale nepoužívá ho ani jako tag při ukládání, ani jako hint při vyhledávání.
+
+### Global vs. workspace-scoped
+
+```
+GLOBAL (sdílené napříč všemi workspace):
+  type:identity      — kdo jsi, účty, prostředí
+  type:environment   — OS, toolbox, paths, tools
+  type:gotcha        — git, gws, systemd, CLI tools
+  type:preference    — jak pracuješ, communication style
+  type:lesson        — obecné lessons (Expected X → Y → do Z)
+
+WORKSPACE-SCOPED (relevantní pro konkrétní projekt):
+  type:procedure     — workflow specifický pro projekt
+  type:lesson        — lessons specifické pro kód projektu
+  type:summary       — session summaries (vždy z konkrétního workspace)
+```
+
+### Navrhovaná dimension `workspace:` v tag schématu
+
+Přidat `workspace:` jako novou dimenzi vedle `source:`, `type:`, `domain:`, `scope:`:
+
+```
+workspace:global                      — sdílené napříč vším (default pro identity/gotcha/preference)
+workspace:opencode                    — ~/OpenCode
+workspace:opencode-doobidoo-plugin    — ~/Projects/opencode-doobidoo-plugin
+workspace:agent-toolbox               — ~/Projects/agent-toolbox
+```
+
+**Pravidlo přiřazení:**
+- `type:identity`, `type:environment`, `type:preference`, `type:gotcha` → vždy `workspace:global`
+- `type:lesson`, `type:procedure`, `type:summary` → `workspace:<název>` odvozený z `directory`
+
+### Potřebné změny v pluginu
+
+Plugin má přístup k `directory` (proměnná `workDir` v `session.idle`, řádek ~329 v `memory-hooks.ts`). Při ukládání se používá jen v textu summary, ne jako tag. Při vyhledávání se nepoužívá vůbec.
+
+**Změna 1 — při ukládání:** automaticky přidat `workspace:<název>` tag odvozený z `directory`:
+
+```typescript
+// Derivace workspace tagu z directory path
+function workspaceTag(dir: string): string {
+  if (!dir || dir === "unknown") return "workspace:global"
+  const name = dir.split("/").filter(Boolean).pop() ?? "global"
+  return `workspace:${name}`
+}
+
+// Při ukládání session summary:
+tags.push(workspaceTag(workDir))
+```
+
+**Změna 2 — při vyhledávání:** boost pro memories tagované aktuálním workspace. Doobidoo API aktuálně nepodporuje boost-by-tag při semantic search — toto by vyžadovalo:
+- buď rozšíření API (`/api/search` s `boost_tags` parametrem),
+- nebo post-processing na straně pluginu: vyhledat víc kandidátů, re-rankovat podle workspace tagu.
+
+**Mezitímní řešení bez změny API:** přidat název workspace do search query jako suffix:
+
+```typescript
+// Aktuálně:
+searchMemories(msgText, MEMORY_INJECT_LIMIT)
+
+// S workspace hint:
+const workspaceName = directory?.split("/").pop() ?? ""
+const queryWithHint = workspaceName
+  ? `${msgText} [workspace: ${workspaceName}]`
+  : msgText
+searchMemories(queryWithHint, MEMORY_INJECT_LIMIT)
+```
+
+Embedding model zachytí workspace název jako součást sémantiky — memories z odpovídajícího workspace budou mít vyšší similarity score, pokud jejich obsah workspace název obsahuje (a session summaries ho vždy obsahují přes `workDir` v textu).
+
+### Dopad
+
+| Scénář | Bez workspace tag | S workspace tag |
+|---|---|---|
+| Pracuji v `opencode-doobidoo-plugin`, ptám se na "jak funguje plugin inject" | Vrátí obecné memories o pluginu | Vrátí + boost pro memories z tohoto workspace |
+| Spustím OpenCode v `agent-toolbox`, nová session | Session summary uložena bez rozlišení | Session summary tagována `workspace:agent-toolbox` |
+| Hledám lesson z minulé práce na konkrétním projektu | Možná najde, záleží na sémantice | Přirozeně upřednostní memories ze stejného workspace |
+
+---
+
 ## Odhad dopadu
 
 | Příležitost | Odhadovaný počet entries | Dopad na kvalitu agenta |
@@ -290,6 +380,8 @@ Tato pravidla nesmí přejít do memory — musí být garantována bez ohledu n
 | GWS gotchas + procedures | 8–12 | Vysoký — hlavní agent dostane GWS kontext |
 | Top changelogs lessons (memory/gws/opencode) | 40–60 | Střední–Vysoký — nahrazuje manuální hledání |
 | Zbytek changelogů (system/tools) | 20–40 | Střední — záložní znalostní báze |
-| **Celkem** | **~80–120** | |
+| Workspace tagging (nové entries) | — | Střední — lepší relevance při focus práci |
+| Workspace query hint (změna pluginu) | — | Střední — boost pro aktuální projekt |
+| **Celkem nových entries** | **~80–120** | |
 
-Aktuální DB: 756 entries, ~251 session summaries, ~398 compaction lessons (mechanické). Přidání 80–120 cílených knowledge entries by výrazně zlepšilo poměr signal/noise.
+Aktuální DB: 756 entries, ~251 session summaries, ~398 compaction lessons (mechanické). Přidání 80–120 cílených knowledge entries by výrazně zlepšilo poměr signal/noise. Workspace tagging dále zlepší relevanci bez nárůstu počtu entries.
