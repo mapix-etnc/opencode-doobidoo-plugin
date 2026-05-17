@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "opencode_doobidoo_plugin",
+  "project_id": "90dee12c-a6d9-41e8-bf40-ada979d73649"
+}
