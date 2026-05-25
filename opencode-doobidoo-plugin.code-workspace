@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.sideBar.location": "left",
+		"workbench.activityBar.location": "default",
+		"workbench.panel.defaultLocation": "left",
+		"task.allowAutomaticTasks": "on",
+		"terminal.integrated.defaultLocation": "editor",
+		"workbench.editor.autoLockGroups": {
+			"terminalEditor": true
+		}
+	}
+}
