@@ -7,7 +7,14 @@ opencode-src
 temp/
 .opencode/
 
-# Beads / Dolt files (added by bd init)
+# Beads — local DB cache (NOT the issues file)
+.beads/embeddeddolt/
+.beads/backup/
+.beads/*.db
+.beads/daemon.log
+.beads/dolt-server.log
+.beads-credential-key
+
+# Dolt
 .dolt/
 *.db
-.beads-credential-key
