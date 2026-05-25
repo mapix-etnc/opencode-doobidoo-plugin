@@ -573,6 +573,23 @@ Do NOT fall back to general knowledge for anything covered by <memory-context>.`
         // Proceed with inject on failure (fail open)
       }
 
+      // Skip memory inject during post-compaction phase.
+      // When pendingLessonsExtraction is true, compaction just finished and
+      // a "continue" synthetic message is being processed. Adding memory
+      // context on top of compaction summary + recent messages can push the
+      // total over the model's context limit, causing a second compaction.
+      const postCompactionState = sessionState.get(sessionId)
+      if (postCompactionState?.pendingLessonsExtraction) {
+        await client.app.log({
+          body: {
+            service: "doobidoo-memory",
+            level: "info",
+            message: `Skipping memory inject for session ${sessionId} (post-compaction phase)`,
+          },
+        })
+        return
+      }
+
       // Skip internal LLM calls (title-generator etc.)
       const MIN_CHAT_SYSTEM_CHARS = 10_000
       const systemTotalChars = output.system.join("").length

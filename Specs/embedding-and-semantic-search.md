@@ -10,6 +10,7 @@
 Embedding je způsob, jak převést text na čísla — konkrétně na **vektor** (seznam čísel), který zachycuje *význam* textu, ne jen jeho písmena.
 
 Příklad:
+
 ```
 "systemd restart service"  →  [0.12, -0.34, 0.87, 0.05, ...]  (384 čísel)
 "jak restartovat službu"   →  [0.11, -0.31, 0.85, 0.06, ...]  (384 čísel)
@@ -88,6 +89,7 @@ Do kontextu jde (v tomto pořadí, s deduplikací přes content_hash):
 Teoretické maximum je ~25 memories, v praxi méně kvůli deduplikaci.
 
 Konfigurace v `memory-hooks.ts`:
+
 - `MEMORY_INJECT_LIMIT = 7`
 - `MEMORY_MIN_SCORE = 0.55`
 - `MEMORY_IDENTITY_LIMIT = 8`

@@ -16,6 +16,50 @@ OpenCode plugin for [doobidoo/mcp-memory-service](https://github.com/doobidoo/mc
 - OpenCode with Bun runtime
 - `@opencode-ai/plugin` SDK
 
+## Service Configuration
+
+mcp-memory-service must be configured for MS-MARCO single-model quality scoring.
+Add the following to the startup wrapper script (e.g. `~/.local/bin/memory-server-start`):
+
+```bash
+# Quality scoring — MS-MARCO only (no DeBERTa)
+# DeBERTa is optimised for web/academic text; it scores short agent snippets
+# at 0.03–0.10 which is uninformative. MS-MARCO is a cross-encoder trained
+# on query-document relevance and rescores correctly on every retrieve call.
+export MCP_QUALITY_SYSTEM_ENABLED=true
+export MCP_QUALITY_AI_PROVIDER=local
+export MCP_QUALITY_LOCAL_MODEL="ms-marco-MiniLM-L-6-v2"
+export MCP_QUALITY_LOCAL_DEVICE=auto
+export MCP_QUALITY_FALLBACK_ENABLED=false   # single model, no DeBERTa fallback
+export MCP_QUALITY_BOOST_ENABLED=true       # rescore on every retrieve with real query
+
+# Memory cleanup / retention (consolidation pipeline)
+# All schedules are disabled by default — enable only if you want automatic
+# forgetting and consolidation. quality_score affects retention tier:
+#   >= 0.7 → high  (MCP_QUALITY_RETENTION_HIGH,  default 365 days)
+#   >= 0.5 → medium (MCP_QUALITY_RETENTION_MEDIUM, default 180 days)
+#   <  0.5 → low   (MCP_QUALITY_RETENTION_LOW_MIN–MAX, default 30–90 days)
+# Deletion only happens for low-quality + potential duplicate memories.
+export MCP_CONSOLIDATION_ENABLED=true
+export MCP_FORGETTING_ENABLED=false            # keep all memories by default
+export MCP_RETENTION_CRITICAL=730             # 2 years for long-term memories
+export MCP_RETENTION_EPHEMERAL=7              # 1 week for session summaries
+export MCP_ASSOCIATION_MIN_SIMILARITY=0.4     # association graph precision
+export MCP_COMPRESSION_THRESHOLD=0.8         # compress only low-relevance memories
+export MCP_CONSOLIDATION_QUALITY_BOOST_ENABLED=true
+export MCP_CONSOLIDATION_MIN_CONNECTIONS_FOR_BOOST=5
+export MCP_CONSOLIDATION_QUALITY_BOOST_FACTOR=1.2
+```
+
+> **Note on store-time scoring:** MS-MARCO receives `query=""` at store time (hard-coded
+> in the library), which returns `0.0`. This is expected — retrieval is driven by embedding
+> distance (not quality_score), and the BOOST mechanism rescores every retrieved memory with
+> the real query. After the first retrieve the score is correct. See
+> `Analysis/model-selection-deberta-vs-msmarco.md` for full reasoning.
+
+> **After changing model configuration:** run `scripts/rescore.py` to update quality scores
+> for all existing memories using historical access queries as context.
+
 ## Installation
 
 ### Option A — Development (symlink, recommended)
