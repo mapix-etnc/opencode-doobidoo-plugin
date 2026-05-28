@@ -216,6 +216,50 @@ Committed permanent docs — read for design context before planning changes:
 | `Specs/no-inject-for-subagents.md` | Rationale for subagent session skip |
 | `docs/adr/` | Architectural Decision Records (MADR format) — 6 decisions documented |
 
+## Agentic Workflow
+
+Full protocol: `AGENTIC_WORKFLOW.md` — read it for complete command reference and interactive flow details.
+
+### Core Principles (ACE-FCA)
+
+> "A bad line of research could land you with thousands of bad lines of code."
+
+- **Human as Orchestrator** — you drive; agents execute
+- **Frequent Intentional Compaction** — each phase runs in fresh context (subtask); use `/handoff` before context limit
+- **Artifacts over Memory** — persist working state to `.beads/artifacts/` (spec, research, plan); artifacts are ephemeral, never committed
+- **Research → Plan → Implement** — mandatory sequence; never skip phases
+- **High-Leverage Review** — `/research` and `/plan` are always interactive dialogues, not passive artifact reviews
+
+### Dialectical Autocoding (Coach-Player)
+
+- **Player** implements; **Coach** validates independently against `spec.md`
+- Max 10 implementation turns per phase — escalate to human if coach does not approve
+
+### Workflow Commands
+
+```
+/create       → interview → bead + spec.md
+/start        → bd ready → setup workspace → exploration-context.md
+/research     → INTERACTIVE: explore → present → iterate → research.md
+/plan         → INTERACTIVE: generate → walk through → iterate until approved → plan.md
+/implement    → execute plan with /coach checkpoints (max 10 turns/phase)
+/finish       → coach review → commit + close bead
+/handoff      → capture state before context limit
+/rehydrate    → resume from latest handoff
+```
+
+### Requirements & Specifications (EARS)
+
+When defining **any** requirements document (`spec.md`, feature spec, API contract):
+
+**MUST** use the EARS skill before finalizing:
+
+```
+skill("ears-requirements-validator")
+```
+
+EARS (Easy Approach to Requirements Syntax) validates that requirements are unambiguous, testable, and complete. Use it especially during `/create` (spec.md definition) and `/plan` (success criteria per phase).
+
 ## Session close checklist
 
 ```
