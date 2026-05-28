@@ -7,6 +7,9 @@ opencode-src
 temp/
 .opencode/
 
+# Beads — artifacts are local-only working files, never committed
+.beads/artifacts/
+
 # Beads — local DB cache (NOT the issues file)
 .beads/embeddeddolt/
 .beads/backup/
