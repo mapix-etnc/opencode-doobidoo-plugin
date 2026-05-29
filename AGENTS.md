@@ -1,6 +1,6 @@
 # AGENTS.md — opencode-doobidoo-plugin
 
-> Full guide: `.config/opencode/AGENTS.md` — read it before making non-trivial changes.
+> Full guide: `~/.config/opencode/AGENTS.md` — read it before making non-trivial changes.
 
 ## Project
 
@@ -190,20 +190,20 @@ LLM credentials from `~/.local/share/opencode/auth.json`.
 
 ## Gotchas
 
-- **Plugin cached in memory** — file changes have no effect until OpenCode is restarted.
+- **Plugin cached in memory** — see Plugin Loading section above.
 - **Synthetic parts** — beads plugin injects synthetic user messages; always filter `!p.synthetic` when extracting query.
 - **`allMessages` before declaration** — in `session.idle` handler, always `await client.session.messages(...)` before using `allMessages`.
 - **`@opencode-ai/plugin` import is type-only** — stripped by Bun at runtime; harness works without the package in node_modules.
 - **`bun.lock` in `.gitignore`** — exists in working tree but is gitignored; don't commit it.
-- **`temp/` adresář** — dočasné soubory (výstupy z bash příkazů pro nativní nástroje) patří sem, ne do `/tmp`. Adresář je v `.gitignore`.
-- **doobidoo memory server je vždy dostupný** — při vývoji a testech (harness + e2e) předpokládejte běžící server na localhost:8000.
+- **`temp/` directory** — temporary files (bash command outputs for native tools) go here, not in `/tmp`. Directory is in `.gitignore`.
+- **doobidoo memory server is always available** — during development and tests (harness + e2e), assume server is running on localhost:8000.
 - **10,000-char threshold** — `system.transform` skips if `system.join("").length < 10_000`. Harness fake system prompt must be ≥ 10,001 chars. See `docs/adr/0005-10000-char-threshold.md`.
 - **Double-search guard** — `lastInjectedQuery === msgText` → skip. Prevents redundant searches when user resends same prompt.
 - **Post-compaction guard** — memory inject skipped when `pendingLessonsExtraction === true`. Without this, inject after compaction can push context over limit → second compaction loop. See `docs/adr/0003-post-compaction-guard.md`.
 
 ## Reference Documentation
 
-Committed permanent docs — read for design context before planning changes:
+Permanent reference docs — read for design context before planning changes:
 
 | File | What it covers |
 |------|---------------|
@@ -264,11 +264,13 @@ EARS (Easy Approach to Requirements Syntax) validates that requirements are unam
 
 ```
 [ ] bun run typecheck
-[ ] bun run harness (všechny scenáře)
-[ ] bun run e2e (až po úspěšném harness)
+[ ] bun run harness                    # all scenarios
+[ ] bun run e2e                        # only after successful harness
 [ ] git add + git commit (conventional commits: feat/fix/refactor/test/docs/chore)
 [ ] git push
 ```
+
+See also: **Session Completion** section (Beads Integration below) for the full mandatory push workflow.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
