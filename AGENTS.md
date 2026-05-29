@@ -1,7 +1,5 @@
 # AGENTS.md — opencode-doobidoo-plugin
 
-> Full guide: `~/.config/opencode/AGENTS.md` — read it before making non-trivial changes.
-
 ## Project
 
 An OpenCode plugin that automatically injects relevant memories from the doobidoo HTTP server
@@ -190,7 +188,6 @@ LLM credentials from `~/.local/share/opencode/auth.json`.
 
 ## Gotchas
 
-- **Plugin cached in memory** — see Plugin Loading section above.
 - **Synthetic parts** — beads plugin injects synthetic user messages; always filter `!p.synthetic` when extracting query.
 - **`allMessages` before declaration** — in `session.idle` handler, always `await client.session.messages(...)` before using `allMessages`.
 - **`@opencode-ai/plugin` import is type-only** — stripped by Bun at runtime; harness works without the package in node_modules.
@@ -203,7 +200,7 @@ LLM credentials from `~/.local/share/opencode/auth.json`.
 
 ## Reference Documentation
 
-Permanent reference docs — read for design context before planning changes:
+Permanent reference docs — read before planning changes:
 
 | File | What it covers |
 |------|---------------|
@@ -258,7 +255,7 @@ When defining **any** requirements document (`spec.md`, feature spec, API contra
 skill("ears-requirements-validator")
 ```
 
-EARS (Easy Approach to Requirements Syntax) validates that requirements are unambiguous, testable, and complete. Use it especially during `/create` (spec.md definition) and `/plan` (success criteria per phase).
+EARS (Easy Approach to Requirements Syntax) checks that requirements are unambiguous, testable, and complete. Use it especially during `/create` (spec.md definition) and `/plan` (success criteria per phase).
 
 ## Session close checklist
 
