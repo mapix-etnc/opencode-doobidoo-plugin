@@ -264,10 +264,11 @@ EARS (Easy Approach to Requirements Syntax) checks that requirements are unambig
 [ ] bun run harness                    # all scenarios
 [ ] bun run e2e                        # only after successful harness
 [ ] git add + git commit (conventional commits: feat/fix/refactor/test/docs/chore)
+[ ] git pull --rebase
 [ ] git push
 ```
 
-See also: **Session Completion** section (Beads Integration below) for the full mandatory push workflow.
+See also: **Session Completion** section (Beads Issue Tracker below) for the full mandatory push workflow.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
